@@ -22,7 +22,10 @@
       Object.getOwnPropertyNames(window.webopsSitesContainer).length !== 0
     ) {
       clearInterval(checkExist);
-      main();
+      var scripts = [
+        "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js",
+      ];
+      loadJS(scripts, main);
     } else {
       var diff1 = performance.now() - checkChartTime;
       console.log("Still waiting for sites list container", diff1 + " msec");
@@ -38,6 +41,8 @@
    * Main
    */
   async function main() {
+    var Chart = window.Chart || {};
+
     var container = window.webopsSitesContainer;
 
     console.log("org", window.app.organizations);
@@ -81,6 +86,13 @@
               response.newrelic.application.application_summary.response_time /
               1000
             ).toFixed(2);
+            let metrics = response.newrelic.metric_data.metrics[0].timeslices;
+            let metric_labels = [];
+            let metric_values = [];
+            metrics.forEach((metric) => {
+              metric_labels.push(metric.from);
+              metric_values.push(metric.values.average_response_time);
+            });
 
             let nr_box = addElement("nr-health-" + response.id, "div");
             let nr_content = `
@@ -97,6 +109,43 @@
             let status_box = document.querySelector(site_selector);
             if (status_box !== null) {
               status_box.appendChild(nr_box);
+
+              let accessChartContainer = addElement(
+                "traffic-chart-" + response.id,
+                "canvas"
+              );
+              accessChartContainer.style = "max-height: 100px";
+
+              // Append access chart to container.
+              new Chart(accessChartContainer, {
+                type: "line",
+                data: {
+                  labels: metric_labels,
+                  datasets: [
+                    {
+                      label: "Avg Response Time",
+                      data: metric_values,
+                      backgroundColor: "#54ACEF",
+                    },
+                  ],
+                },
+                options: {
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: false, // Hide legend
+                  },
+                  scales: {
+                    y: {
+                      //   display: false, // Hide Y axis labels
+                    },
+                    x: {
+                      display: false, // Hide X axis labels
+                    },
+                  },
+                },
+              });
+
+              status_box.after(accessChartContainer);
             }
           }
         });
@@ -173,13 +222,13 @@
     // Fix New Relic API response
     if (Object.keys(response).length > 0) {
       let keys = Object.keys(response);
-      let data = response[keys[0]];
+      let nr_data = response[keys[0]];
 
       await fetch("https://api.newrelic.com/v2/applications.json", {
         body: "filter[name]=(live)",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "X-Api-Key": data.api_key,
+          "X-Api-Key": nr_data.api_key,
         },
         method: "POST",
       })
@@ -187,7 +236,31 @@
           if (resp.ok) {
             let data = await resp.json();
             if (data.applications.length > 0) {
-              response["application"] = data.applications[0];
+              let app = data.applications[0];
+              response["application"] = app;
+
+              // Get web transaction time data
+              await fetch(
+                `https://api.newrelic.com/v2/applications/${app.id}/metrics/data.json`,
+                {
+                  body: "names[]=HttpDispatcher&values[]=average_response_time",
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-Api-Key": nr_data.api_key,
+                  },
+                  method: "POST",
+                }
+              )
+                .then(async (resp) => {
+                  if (resp.ok) {
+                    let data = await resp.json();
+                    if (Object.keys(data.metric_data).length > 0) {
+                      response["metric_data"] = data.metric_data;
+                    }
+                  }
+                  throw new Error("Network response was not ok.");
+                })
+                .catch((err) => console.error);
             }
           }
           throw new Error("Network response was not ok.");
