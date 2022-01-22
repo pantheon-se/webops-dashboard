@@ -61,31 +61,9 @@
         // Get New Relic data for each site
         await responses.forEach(async (response) => {
           response["newrelic"] = await getNewRelicData(response.site.id);
-
-          let health = response.newrelic.application.health_status;
-          let host_count =
-            response.newrelic.application.application_summary.host_count;
-          let response_time = (
-            response.newrelic.application.application_summary.response_time /
-            1000
-          ).toFixed(2);
-
-          let nr_box = addElement("nr-health-" + response.id, "div");
-          let nr_content = `
-                <ul>
-                    <li>Health: ${health}</li>
-                    <li>Hosts: ${host_count}</li>
-                    <li>Response: ${response_time} sec.</li>
-                </ul>
-              `;
-          nr_box.innerHTML = nr_content;
-
-          // Get site row
-          let site_selector = `a[href="/sites/${response.id}"]`;
-          let status_box = document.querySelector(site_selector);
-          status_box.appendChild(nr_box);
-
-          /*
+          let application = response?.newrelic?.application;
+          if (application !== undefined) {
+            /*
                 {
                     "response_time": 6.89,
                     "throughput": 2,
@@ -96,6 +74,31 @@
                     "instance_count": 3
                 }
                 */
+            let health = response.newrelic.application.health_status;
+            let host_count =
+              response.newrelic.application.application_summary.host_count;
+            let response_time = (
+              response.newrelic.application.application_summary.response_time /
+              1000
+            ).toFixed(2);
+
+            let nr_box = addElement("nr-health-" + response.id, "div");
+            let nr_content = `
+                <ul>
+                    <li>Health: ${health}</li>
+                    <li>Hosts: ${host_count}</li>
+                    <li>Response: ${response_time} sec.</li>
+                </ul>
+              `;
+            nr_box.innerHTML = nr_content;
+
+            // Get site row
+            let site_selector = `.js-sites-table table tr a[href$="/sites/${response.id}"]`;
+            let status_box = document.querySelector(site_selector);
+            if (status_box !== null) {
+              status_box.appendChild(nr_box);
+            }
+          }
         });
 
         return responses;
@@ -157,7 +160,7 @@
    * @returns
    */
   async function getNewRelicData(site_id) {
-    let url = `/api/sites/${site_id}/environments/dev/bindings?type=newrelic`;
+    let url = `/api/sites/${site_id}/environments/live/bindings?type=newrelic`;
     let response = await fetch(url)
       .then(async (resp) => {
         if (resp.ok) {
