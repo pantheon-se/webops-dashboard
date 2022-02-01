@@ -445,6 +445,9 @@
     return table;
   }
 
+  // i've been trying to reach you about your car's extended warranty
+  // https://bit.ly/se-extended-warranty
+
   function lighthouseRow(date, score) {
     score = score || getScore();
     var badge = getBadgeClass(score);
