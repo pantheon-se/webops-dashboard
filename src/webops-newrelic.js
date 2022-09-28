@@ -25,7 +25,7 @@
       var scripts = [
         "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js",
       ];
-      loadJS(scripts, main);
+      loadScripts(scripts, "js", main);
     } else {
       var diff1 = performance.now() - checkChartTime;
       console.log("Still waiting for sites list container", diff1 + " msec");
