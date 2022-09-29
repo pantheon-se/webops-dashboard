@@ -16,15 +16,11 @@ const newrelic = require("../lib/newrelic");
 const lighthouse = require("../lib/lighthouse").default;
 const domHelperClass = require("../lib/domHelper").default;
 const domHelper = new domHelperClass();
-const mysqlClass = require("../lib/mysql").default;
-const mysql = new mysqlClass();
 const { Workflows } = require("../lib/quicksilver");
 const qs = new Workflows();
 
 (function () {
   "use strict";
-
-  console.log("webops script update");
 
   domHelper.loadScripts(
     ["https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css"],
@@ -40,20 +36,21 @@ const qs = new Workflows();
     domHelper.ready("[class$='containerStyle']", (el) => {
       main(el);
     });
+
+    // Load quicksilver logs
     qs.getQuicksilverLogs().then((data) => {
       let qsLogWrapper = qs.generateDataTable(data);
       console.log(qsLogWrapper);
       jQuery("[class$='containerStyle']").append(qsLogWrapper);
     });
+
+    // Add traffic info.
+    domHelper.ready(".workspace-region .live-workspace", (el) => {
+      traffic.getWeeklySummary();
+    });
   });
 
-  // Clear block UI domHelper.
-  domHelper.ready(".blockUI", (el) => {
-    el.remove();
-    console.log("removed BlockUI");
-  });
-
-  domHelper.ready("input.dbCommandLine", (el) => {
+  domHelper.ready("#connectionModal", (el) => {
     console.log("input db command");
   });
 
