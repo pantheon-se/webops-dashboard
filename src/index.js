@@ -45,8 +45,20 @@ const qs = new Workflows();
     });
 
     // Add traffic info.
-    domHelper.ready(".workspace-region .live-workspace", (el) => {
-      traffic.getWeeklySummary();
+    domHelper.ready(".site-workshop .workspace-region", async (el) => {
+      const data = await traffic.getWeeklySummary();
+      let navbar = document.querySelector(
+        "#navbar-view nav[class$='utilityNavStyle']"
+      );
+      let cacheHit = domHelper.addElement(
+        "pantheon-cache-hit",
+        "span",
+        "traffic-stat"
+      );
+      cacheHit.textContent =
+        "Cache Ratio: " + (data.cache_ratio * 100).toFixed(2) + "%";
+      cacheHit.style = "";
+      navbar.prepend(cacheHit);
     });
   });
 
